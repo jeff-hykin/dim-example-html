@@ -1,20 +1,11 @@
-# dimos.yaml: what this app is, what it needs from Desktop/dimos/other apps, and what it offers.
-# The spec only ever grows (new optional keys); a Desktop ignores keys it doesn't know. See GUIDE.md.
+# the app's contract with Desktop: https://github.com/jeff-hykin/dimos-desktop-mirror/blob/main/docs/create-apps/index.md
 title: Example (HTML)
-# REQUIRED: the dimos.yaml spec version this file follows (v1.x only grows; a breaking change would be v2)
 spec-version: v1.0
-# what this app calls OUTSIDE itself (Desktop refuses an undeclared call from its pages), by who serves it.
-# A value is a list of `METHOD path`, a version range, or {version: <range>, endpoints: [...]}.
 uses:
-    # dimos's API (the dimos gateway); paths are relative to /dimos, so this is GET /dimos/runs
     "@dimos-gateway":
-        - GET /runs # what's running
-    # Desktop's own API; paths as Desktop serves them (/api/..., /recordings/...)
+        - GET /runs
     "@desktop-gateway":
-        - POST /api/notifications # a notification
-    # it subscribes/publishes topics through Desktop's zenoh bridge: the bridge versions it works with
+        - POST /api/notifications
     "@zenoh-gateway": ">=0.5 <0.6"
-    # any other name is another app: its public endpoints (what its provides: lists), relative to /apps/<name>/
     dim-controller:
         - GET api/status
-# no provides: here: a static app has no server to answer endpoints (see the Deno and Rust examples)
