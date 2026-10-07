@@ -21,6 +21,5 @@ Desktop → App Store → **Install From URL** → `github.com/jeff-hykin/dim-ex
 
 - `dimos.yaml`: the contract with Desktop (what it calls, what it offers)
 - `icon.svg`: its icon
-- `flake.nix`: `nix build .#dimosApp` is what Desktop runs
 - `index.html`: the whole app (its style and script inline)
 
