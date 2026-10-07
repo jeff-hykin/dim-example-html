@@ -1,0 +1,13 @@
+# dimos.yaml: what this app is, what it needs from Desktop/dimos/other apps, and what it offers.
+# The spec only ever grows (new optional keys); a Desktop ignores keys it doesn't know. See GUIDE.md.
+title: Example (HTML)
+# REQUIRED: the Desktop app API versions this app works with (2.1 = ignores unknown keys; never a breaking 3)
+dimos-desktop-api: ">=2.1 <3"
+# every endpoint this app calls OUTSIDE itself (Desktop refuses an undeclared call from its pages)
+dimos-api:
+    - GET /dimos/runs # the dimos gateway: what's running
+    - GET /apps/dim-controller/api/status # another app's public (agent:) endpoint
+    - POST /api/notifications # Desktop: a notification
+# it subscribes/publishes topics through Desktop's zenoh-web bridge: the bridge versions it works with
+zenoh-web: ">=0.4 <0.5"
+# no agent: / private: here: a static app has no server to answer them (see the Deno and Rust examples)
