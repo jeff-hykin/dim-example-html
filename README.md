@@ -1,6 +1,6 @@
 # dim-example-html
 
-A showcase [dimOS Desktop](https://github.com/jeff-hykin/dimos-desktop-mirror) app: just static files, no server. It shows how to:
+A showcase [dimOS Desktop](https://github.com/jeff-hykin/dimos-desktop-mirror) app: one HTML file, no server. It shows how to:
 
 - subscribe to a dimos topic and decode it (`/odom`, a `geometry_msgs.PoseStamped`, via zenoh-web + [@dimos/msgs](https://jsr.io/@dimos/msgs))
 - publish one (`/cmd_vel`, a `geometry_msgs.Twist`, with a deadman)
@@ -9,9 +9,9 @@ A showcase [dimOS Desktop](https://github.com/jeff-hykin/dimos-desktop-mirror) a
 
 
 Read **[Making a dimOS app](https://github.com/jeff-hykin/dimos-desktop-mirror/blob/main/docs/create-apps/index.md)** (in the dimOS Desktop repo) for how dimOS apps work. The other examples:
-[plain HTML](https://github.com/jeff-hykin/dim-example-html) ·
-[Deno](https://github.com/jeff-hykin/dim-example-deno) ·
-[Rust](https://github.com/jeff-hykin/dim-example-rust).
+[simple-html](https://github.com/jeff-hykin/dim-example-html) ·
+[deno-server: React, Vite, Deno](https://github.com/jeff-hykin/dim-example-deno) ·
+[Rust server](https://github.com/jeff-hykin/dim-example-rust).
 
 ## Install it
 
@@ -22,5 +22,5 @@ Desktop → App Store → **Install From URL** → `github.com/jeff-hykin/dim-ex
 - `dimos.yaml`: the contract with Desktop (what it calls, what it offers)
 - `icon.svg`: its icon
 - `flake.nix`: `nix build .#dimosApp` is what Desktop runs
-- `frontend/`: the page (`index.html`, `app.js`, `style.css`)
+- `index.html`: the whole app (its style and script inline)
 

@@ -1,0 +1,325 @@
+<!doctype html>
+<!--
+  A dimOS Desktop app page. Desktop serves it at /apps/<name>/, so every URL below is RELATIVE:
+    ../../theme.css      Desktop's theme tokens (every skin)          -> /theme.css
+    ../../dimos/...      the dimos gateway's API                       -> /dimos/...
+    ../../api/...        Desktop's own API                             -> /api/...
+    ../../apps/<other>/  another app's public (agent:) endpoints       -> /apps/<other>/...
+    api/...              this app's own server (the Deno/Rust examples) -> /apps/<name>/api/...
+  Every one of them is declared in dimos.yaml; Desktop refuses an undeclared call from this page (a 403 + a notification).
+-->
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>dimOS example app</title>
+        <link rel="stylesheet" href="../../theme.css" />
+        <style>
+            /* Only Desktop's theme tokens (../../theme.css): the page looks right in every skin, light or dark. */
+            :root {
+                color-scheme: light dark;
+            }
+            body {
+                margin: 0;
+                padding: 16px 16px calc(16px + var(--dim-inset-bottom, 0px));
+                background: var(--bg);
+                color: var(--fg);
+                font: 14px/1.5 var(--sans);
+            }
+            header,
+            main {
+                max-width: 760px;
+                margin: 0 auto;
+            }
+            h1 {
+                margin: 0;
+                font: 400 20px var(--display, var(--sans));
+                text-transform: var(--label-case, none);
+                letter-spacing: var(--track-label, 0);
+            }
+            h2 {
+                margin: 0 0 4px;
+                font: 600 14px var(--sans);
+            }
+            section {
+                margin-top: 14px;
+                padding: 12px 14px;
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+            }
+            .muted {
+                margin: 0 0 8px;
+                color: var(--muted-fg);
+                font-size: 12.5px;
+            }
+            code,
+            pre {
+                font-family: var(--mono);
+            }
+            pre {
+                margin: 0;
+                max-height: 160px;
+                overflow: auto;
+                padding: 8px;
+                background: var(--input-bg);
+                border: 1px solid var(--hair, var(--border));
+                border-radius: var(--radius-sm);
+                font-size: 12px;
+                white-space: pre-wrap;
+            }
+            .grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+                gap: 8px;
+                margin-bottom: 8px;
+            }
+            .grid > div {
+                display: flex;
+                flex-direction: column;
+                padding: 6px 8px;
+                background: var(--input-bg);
+                border-radius: var(--radius-sm);
+            }
+            .k {
+                color: var(--muted-fg);
+                font-size: 11px;
+                text-transform: uppercase;
+            }
+            .v {
+                font: 600 18px var(--mono);
+            }
+            .row {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin-bottom: 8px;
+            }
+            button {
+                padding: 8px 14px;
+                background: var(--hover);
+                color: var(--fg);
+                border: 1px solid var(--border-strong, var(--border));
+                border-radius: var(--radius-sm);
+                font: 600 13px var(--sans);
+                cursor: pointer;
+                touch-action: none;
+            }
+            button:hover {
+                border-color: var(--primary);
+            }
+            input {
+                padding: 6px 8px;
+                background: var(--input-bg);
+                color: var(--fg);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-sm);
+                font: 13px var(--mono);
+            }
+            label {
+                color: var(--muted-fg);
+                font-size: 12px;
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <h1>dimOS example app</h1>
+            <p class="muted" id="shape"></p>
+        </header>
+        <main>
+            <section>
+                <h2>1 · Subscribe to a topic and decode it</h2>
+                <p class="muted">zenoh-web → <code>dimos/odom/geometry_msgs.PoseStamped</code> → @dimos/msgs</p>
+                <div class="grid">
+                    <div><span class="k">x</span><span class="v" id="x">—</span></div>
+                    <div><span class="k">y</span><span class="v" id="y">—</span></div>
+                    <div><span class="k">yaw</span><span class="v" id="yaw">—</span></div>
+                    <div><span class="k">rate</span><span class="v" id="hz">—</span></div>
+                </div>
+                <label>topic <input id="odomTopic" value="odom" /></label>
+            </section>
+            <section>
+                <h2>2 · Publish a topic</h2>
+                <p class="muted">hold a button: a <code>geometry_msgs.Twist</code> at 10 Hz on <code>dimos/&lt;topic&gt;/geometry_msgs.Twist</code>; a zero Twist is armed as the deadman</p>
+                <div class="row">
+                    <button id="forward">▲ forward</button>
+                    <button id="left">⟲ left</button>
+                    <button id="right">⟳ right</button>
+                </div>
+                <label>topic <input id="cmdTopic" value="cmd_vel" /></label>
+                <p class="muted" id="sent"></p>
+            </section>
+            <section>
+                <h2>3 · Call the dimos gateway</h2>
+                <p class="muted"><code>GET /dimos/runs</code> — what's running</p>
+                <pre id="runs">…</pre>
+            </section>
+            <section>
+                <h2>4 · Call another app</h2>
+                <p class="muted"><code>GET /apps/dim-controller/api/status</code> — Controller's public (agent:) endpoint</p>
+                <pre id="other">…</pre>
+            </section>
+            <section>
+                <h2>5 · Talk to Desktop</h2>
+                <div class="row">
+                    <button id="notify">Send a notification</button>
+                    <button id="openLauncher">Open the Launcher</button>
+                </div>
+            </section>
+            <section id="backendSection">
+                <h2>6 · This app's own server</h2>
+                <p class="muted" id="backendNote"></p>
+                <pre id="hello">…</pre>
+                <div class="row">
+                    <input id="noteText" placeholder="a note" />
+                    <button id="addNote">Add note (private endpoint)</button>
+                </div>
+                <ul id="notes"></ul>
+            </section>
+        </main>
+        <script type="module">
+            // The example page: the same file in all three examples (html, Deno, Rust). Plain ES modules, no build step.
+            //
+            // Two libraries, both imported by URL (pin the exact versions; dimos.yaml's ranges say which ones this app works with):
+            //   - zenoh-web's browser client: subscribe/publish dimos topics through Desktop's bridge (dimos.yaml `zenoh-web:`)
+            //   - @dimos/msgs: dimos's LCM message types (decode/encode the bytes a topic carries)
+            // For a robot with no internet, vendor these files into the app instead of loading them from esm.sh.
+            import { connect } from "https://esm.sh/gh/jeff-hykin/zenoh-web@63b72dd/client/zenoh_web.ts"
+            import { geometry_msgs } from "https://esm.sh/jsr/@dimos/msgs@0.1.4"
+
+            const $ = (id) => document.getElementById(id)
+
+            // ── theme: look like Desktop in every skin ──
+            // Desktop keeps the skin and corners in localStorage (same origin as this page); ../../theme.css has every skin's tokens.
+            function applyTheme() {
+                try {
+                    document.documentElement.dataset.skin = localStorage.getItem("portal.theme") || "portal"
+                    const corners = localStorage.getItem("portal.corners")
+                    if (corners && corners !== "theme") {
+                        document.documentElement.dataset.corners = corners
+                    }
+                } catch {
+                    // storage unavailable (outside Desktop): the theme.css default (Portal) stays
+                }
+            }
+            applyTheme()
+            addEventListener("storage", applyTheme)
+
+            // ── 1 + 2: topics over zenoh-web ──
+            // dimos's zenoh keys are `dimos/<topic>/<message type>`, and the payload is the LCM encoding of that message.
+            const zenoh = await connect(new URL("../../zenoh-web", location.href).href, {
+                // a heartbeat lets the bridge publish our deadman (a zero Twist) if this page dies mid-drive
+                heartbeatHz: 5,
+                heartbeatMisses: 3,
+            })
+
+            let odom = null
+            function subscribeOdom() {
+                odom?.close()
+                const key = `dimos/${$("odomTopic").value.replace(/^\/+/, "")}/geometry_msgs.PoseStamped`
+                let count = 0
+                let since = performance.now()
+                odom = zenoh.subscribe(key, { delivery: "latest", maxHz: 20 }, (message) => {
+                    const pose = geometry_msgs.PoseStamped.decode(message.bytes).pose
+                    const { x, y, z, w } = pose.orientation
+                    const yaw = Math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z))
+                    $("x").textContent = pose.position.x.toFixed(2)
+                    $("y").textContent = pose.position.y.toFixed(2)
+                    $("yaw").textContent = `${(yaw * 180 / Math.PI).toFixed(0)}°`
+                    count++
+                    const now = performance.now()
+                    if (now - since > 1000) {
+                        $("hz").textContent = `${(count * 1000 / (now - since)).toFixed(1)} Hz`
+                        count = 0
+                        since = now
+                    }
+                })
+            }
+            subscribeOdom()
+            $("odomTopic").addEventListener("change", subscribeOdom)
+
+            const twist = (forward, turn) =>
+                new geometry_msgs.Twist({
+                    linear: new geometry_msgs.Vector3({ x: forward, y: 0, z: 0 }),
+                    angular: new geometry_msgs.Vector3({ x: 0, y: 0, z: turn }),
+                }).encode()
+
+            let publisher = null
+            async function openPublisher() {
+                publisher?.close()
+                const key = `dimos/${$("cmdTopic").value.replace(/^\/+/, "")}/geometry_msgs.Twist`
+                publisher = zenoh.publisher(key, { delivery: "latest" })
+                await publisher.setDeadman(twist(0, 0))
+            }
+            openPublisher()
+            $("cmdTopic").addEventListener("change", openPublisher)
+
+            let driving = null
+            let sent = 0
+            function hold(button, forward, turn) {
+                const start = () => {
+                    clearInterval(driving)
+                    driving = setInterval(() => {
+                        publisher.put(twist(forward, turn))
+                        $("sent").textContent = `sent ${++sent} Twists`
+                    }, 100)
+                }
+                const stop = () => {
+                    clearInterval(driving)
+                    driving = null
+                    publisher.put(twist(0, 0))
+                }
+                button.addEventListener("pointerdown", start)
+                for (const event of ["pointerup", "pointerleave", "pointercancel"]) {
+                    button.addEventListener(event, stop)
+                }
+            }
+            hold($("forward"), 0.3, 0)
+            hold($("left"), 0, 0.6)
+            hold($("right"), 0, -0.6)
+
+            // ── 3: the dimos gateway (dimos.yaml dimos-api: GET /dimos/runs) ──
+            async function json(url, init) {
+                const response = await fetch(url, init)
+                const body = await response.json().catch(() => null)
+                if (!response.ok) {
+                    throw new Error(body?.error ?? `${response.status} ${response.statusText}`)
+                }
+                return body
+            }
+            const show = (id, promise) =>
+                promise.then(
+                    (value) => ($(id).textContent = JSON.stringify(value, null, 2)),
+                    (error) => ($(id).textContent = `✗ ${error.message}`),
+                )
+
+            show(
+                "runs",
+                json("../../dimos/runs").then(({ launch }) =>
+                    launch ? { blueprint: launch.blueprint, phase: launch.phase } : "nothing launched yet"
+                ),
+            )
+
+            // ── 4: another app's public endpoint (dimos.yaml dimos-api: GET /apps/dim-controller/api/status) ──
+            show("other", json("../../apps/dim-controller/api/status"))
+
+            // ── 5: Desktop itself ──
+            $("notify").addEventListener("click", () =>
+                json("../../api/notifications", {
+                    method: "POST",
+                    headers: { "content-type": "application/json" },
+                    body: JSON.stringify({ title: "Hello from the example app", body: "POST /api/notifications", kind: "ok" }),
+                })
+            )
+            // opening another app (or a built-in: launcher, appstore, settings) is a message to the shell around this page
+            $("openLauncher").addEventListener("click", () =>
+                parent.postMessage({ dimosShell: 1, type: "open_app", app: "launcher" }, location.origin)
+            )
+
+            // ── 6: no server: a static app never calls api/... (nothing in its dimos.yaml offers it; Desktop would refuse it) ──
+            $("shape").textContent = "this is the plain-HTML example (no server)"
+            $("backendSection").hidden = true
+        </script>
+    </body>
+</html>
