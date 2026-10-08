@@ -120,6 +120,26 @@ Another app's public endpoint (its `provides:`), at `../../apps/<name>/`.
 await json("../../apps/dim-controller/api/status")
 ```
 
+## Call a skill
+
+List the running blueprint's skills into a `<select>`; call one only on a click (a skill can move the robot).
+
+```js
+const { skills } = await json("../../dimos/skills") // [{ name, module, description, params (JSON Schema) }]
+$("skill").replaceChildren(...skills.map(({ name, module }) => new Option(`${module}.${name}`, name)))
+
+$("callSkill").addEventListener("click", () => {
+    const { name, module } = skills[$("skill").selectedIndex]
+    json("../../dimos/skills/call", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ skill: name, module, args: JSON.parse($("skillArgs").value || "{}") }),
+    }) // { ok, text, via, ... }
+})
+```
+
+![skills listed in a select, one called with its result](docs/images/skills.png)
+
 ## A Desktop notification
 
 ```js
@@ -185,6 +205,8 @@ uses:
     "@dimos-gateway":
         - GET /runs
         - GET /msgs.js
+        - GET /skills
+        - POST /skills/call
     "@desktop-gateway":
         - POST /api/notifications
     "@zenoh-gateway": ">=0.5 <0.6"

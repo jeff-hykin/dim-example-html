@@ -135,6 +135,14 @@
                 border-radius: var(--radius-sm);
                 object-fit: contain;
             }
+            select {
+                padding: 6px 8px;
+                background: var(--input-bg);
+                color: var(--fg);
+                border: 1px solid var(--border);
+                border-radius: var(--radius-sm);
+                font: 13px var(--mono);
+            }
             label {
                 color: var(--muted-fg);
                 font-size: 12px;
@@ -196,8 +204,19 @@
                     <button id="openLauncher">Open the Launcher (blueprints with cmd_vel)</button>
                 </div>
             </section>
+            <section>
+                <h2>7 · Call a skill</h2>
+                <p class="muted"><code>GET /dimos/skills</code> lists the running blueprint's skills; <code>POST /dimos/skills/call</code> runs one (only when you click: a skill can move the robot)</p>
+                <div class="row">
+                    <select id="skill"></select>
+                    <input id="skillArgs" value="{}" spellcheck="false" />
+                    <button id="callSkill">Call</button>
+                </div>
+                <p class="muted" id="skillDoc"></p>
+                <pre id="skillResult">…</pre>
+            </section>
             <section id="backendSection">
-                <h2>7 · This app's own server</h2>
+                <h2>8 · This app's own server</h2>
                 <p class="muted" id="backendNote"></p>
                 <pre id="hello">…</pre>
                 <div class="row">
@@ -373,7 +392,41 @@
             // another app (or a built-in: launcher, appstore, settings); the Launcher takes its filters (query, robot, stream)
             $("openLauncher").addEventListener("click", () => openApp("launcher", { stream: "cmd_vel" }))
 
-            // ── 7: no server: a static app never calls api/... (nothing in its dimos.yaml offers it; Desktop would refuse it) ──
+            // ── 7: skills (dimos.yaml @dimos-gateway: GET /skills, POST /skills/call); listing is safe, calling only on a click ──
+            let skills = []
+            json("../../dimos/skills").then(
+                (answer) => {
+                    skills = answer.skills
+                    $("skill").replaceChildren(
+                        ...skills.map(({ name, module }) => new Option(`${module}.${name}`, name)),
+                    )
+                    $("skillDoc").textContent = skills.length ? skills[0].description : "no skills: nothing running"
+                },
+                (error) => ($("skillDoc").textContent = `✗ ${error.message}`),
+            )
+            $("skill").addEventListener("change", () => {
+                const skill = skills[$("skill").selectedIndex]
+                $("skillDoc").textContent = `${skill.description} (params: ${Object.keys(skill.params.properties ?? {}).join(", ") || "none"})`
+            })
+            $("callSkill").addEventListener("click", () => {
+                const { name, module } = skills[$("skill").selectedIndex] ?? {}
+                if (!name) {
+                    return
+                }
+                // inside then(): bad JSON in the args box shows as the result's error
+                show(
+                    "skillResult",
+                    Promise.resolve().then(() =>
+                        json("../../dimos/skills/call", {
+                            method: "POST",
+                            headers: { "content-type": "application/json" },
+                            body: JSON.stringify({ skill: name, module, args: JSON.parse($("skillArgs").value || "{}") }),
+                        })
+                    ),
+                )
+            })
+
+            // ── 8: no server: a static app never calls api/... (nothing in its dimos.yaml offers it; Desktop would refuse it) ──
             $("shape").textContent = "this is the plain-HTML example (no server)"
             $("backendSection").hidden = true
         </script>
