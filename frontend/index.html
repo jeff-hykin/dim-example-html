@@ -150,7 +150,7 @@
             </section>
             <section>
                 <h2>2 · Publish a topic</h2>
-                <p class="muted">hold a button: a <code>geometry_msgs.Twist</code> at 10 Hz on <code>dimos/&lt;topic&gt;/geometry_msgs.Twist</code>; a zero Twist is armed as the deadman</p>
+                <p class="muted">hold a button: a <code>geometry_msgs.Twist</code> at 10 Hz on <code>dimos/&lt;topic&gt;/geometry_msgs.Twist</code>; nothing is sent until you press; while you drive a zero Twist is armed as the deadman, and the release sends it and disarms</p>
                 <div class="row">
                     <button id="forward">▲ forward</button>
                     <button id="left">⟲ left</button>
@@ -194,7 +194,7 @@
             // with dim-app's tools/vendor.js). It holds the page's connection to Desktop's zenoh-gateway and the codec
             // ../../dimos/msgs.js from the dimos gateway (dimos.yaml `@dimos-gateway: GET /msgs.js`): every dimos message's
             // decoder/encoder, generated from the dimos that's running, so it always matches it.
-            import { DimApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.18.0/source/dim_app.js"
+            import { DimApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.18.1/source/dim_app.js"
 
             const $ = (id) => document.getElementById(id)
 
@@ -249,6 +249,8 @@
             // fields left out are zero
             const twist = (forward, turn) => ({ linear: { x: forward }, angular: { z: turn } })
 
+            // Nothing goes out until a button is pressed: the publisher stays silent until its first put(), and its deadman
+            // (a zero Twist the gateway sends if this page goes away) is armed by a drive and disarmed by the stop.
             let publisher = null
             async function openPublisher() {
                 const next = await app.publisher($("cmdTopic").value, "geometry_msgs.Twist", { delivery: "latest" })
@@ -270,9 +272,13 @@
                     }, 100)
                 }
                 const stop = () => {
+                    // only a press ends in a stop (pointerleave also fires on a plain hover)
+                    if (!driving) {
+                        return
+                    }
                     clearInterval(driving)
                     driving = null
-                    publisher?.put(twist(0, 0))
+                    publisher?.stop()
                 }
                 button.addEventListener("pointerdown", start)
                 for (const event of ["pointerup", "pointerleave", "pointercancel"]) {
