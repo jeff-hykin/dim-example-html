@@ -20,7 +20,7 @@ One import, by URL. `DimApp` holds the page's zenoh-gateway connection and loads
 (`/dimos/msgs.js`, generated from the dimos that's running).
 
 ```js
-import { DimApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.20.1/source/dim_app.js"
+import { DimApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.20.4/source/dim_app.js"
 
 const app = new DimApp({
     msgDecodeEndpoint: "../../dimos/msgs.js",
@@ -155,7 +155,7 @@ json("../../api/notifications", {
 ## Open the Launcher, filtered
 
 ```js
-import { openApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.20.1/source/desktop.js"
+import { openApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.20.4/source/desktop.js"
 
 openApp("launcher", { stream: "cmd_vel" }) // only blueprints that drive a robot; also query, robot, selected
 ```
