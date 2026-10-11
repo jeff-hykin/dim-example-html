@@ -9,17 +9,40 @@ dimos-desktop install github.com/jeff-hykin/dim-example-html
 [![Use this template](https://img.shields.io/badge/Use%20this%20template-2ea44f?style=for-the-badge&logo=github)](https://github.com/jeff-hykin/dim-example-html/generate)
 
 A [dimOS Desktop](https://github.com/jeff-hykin/dimos-desktop-mirror) app in one file, `frontend/index.html`: no build,
-no server. Every snippet below is from that file, trimmed to the point. How apps work:
+no server. Its whole UI is [dimos-react](https://github.com/jeff-hykin/dimos-react) (Desktop's theme followed live,
+cards, buttons, inputs, video, toasts); its data comes through [dim-app](https://github.com/jeff-hykin/dim-app)'s
+`DimApp`. Every snippet below is from that file, trimmed to the point. How apps work:
 **[Making a dimOS app](https://github.com/jeff-hykin/dimos-desktop-mirror/blob/main/docs/create-apps/index.md)**.
 Other examples: [Deno + React](https://github.com/jeff-hykin/dim-example-deno) ·
-[Rust](https://github.com/jeff-hykin/dim-example-rust).
+[Rust](https://github.com/jeff-hykin/dim-example-rust) · [Bun](https://github.com/jeff-hykin/dim-example-bun).
+
+![the page](docs/images/page.png)
 
 ## Connect
 
-One import, by URL. `DimApp` holds the page's zenoh-gateway connection and loads dimos's message codec
+No build: the libraries load from esm.sh by URL (pinned tags), and an import map shares one React between the page and
+dimos-react.
+
+```html
+<script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@19.2.0",
+            "react/": "https://esm.sh/react@19.2.0/",
+            "react-dom": "https://esm.sh/react-dom@19.2.0",
+            "react-dom/": "https://esm.sh/react-dom@19.2.0/",
+            "dimos-react": "https://esm.sh/gh/jeff-hykin/dimos-react@v0.1.4/mod.js?external=react,react-dom"
+        }
+    }
+</script>
+```
+
+`DimApp` holds the page's zenoh-gateway connection (dimos-react's hooks share it) and loads dimos's message codec
 (`/dimos/msgs.js`, generated from the dimos that's running).
 
 ```js
+import { createRoot } from "react-dom/client"
+import { AppProvider, Button, Card, h, Stat } from "dimos-react"
 import { DimApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.20.4/source/dim_app.js"
 
 const app = new DimApp({
@@ -27,6 +50,9 @@ const app = new DimApp({
     // a heartbeat lets the gateway publish our deadman (a zero Twist) if this page dies mid-drive
     connectOptions: { heartbeatHz: 5, heartbeatMisses: 3 },
 })
+
+// AppProvider: Desktop's skin (followed live), toasts, dialogs, URL state
+createRoot(document.getElementById("root")).render(h(AppProvider, null, h(App)))
 ```
 
 ## Subscribe to a topic, decoded
@@ -34,53 +60,37 @@ const app = new DimApp({
 `/odom` arrives as a plain `geometry_msgs.PoseStamped` object.
 
 ```js
-const options = { type: "geometry_msgs.PoseStamped", delivery: "latest", maxHz: 20 }
-unsubscribeOdom = app.subscribe($("odomTopic").value, ({ pose }) => {
-    const { x, y, z, w } = pose.orientation
-    const yaw = Math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z))
-    $("x").textContent = pose.position.x.toFixed(2)
-    $("y").textContent = pose.position.y.toFixed(2)
-    $("yaw").textContent = `${(yaw * 180 / Math.PI).toFixed(0)}°`
-}, options)
+useEffect(() => {
+    const options = { type: "geometry_msgs.PoseStamped", delivery: "latest", maxHz: 20 }
+    return app.subscribe(topic, ({ pose }) => {
+        const { x, y, z, w } = pose.orientation
+        const yaw = Math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z))
+        setPose({ x: pose.position.x, y: pose.position.y, yaw: yaw * 180 / Math.PI })
+    }, options)
+}, [topic])
+
+h(Stat, { label: "x", value: pose ? pose.x.toFixed(2) : "—" })
 ```
 
-![odom decoded into x, y, yaw and rate](docs/images/odom-decoded.png)
+## A camera, and a snapshot of it
 
-## A camera in a `<video>`
-
-The gateway turns a `sensor_msgs.Image` topic into an H.264 track; a plain `<video>` plays it.
-
-```html
-<video id="camera" autoplay muted playsinline></video>
-```
+The gateway turns a `sensor_msgs.Image` topic into an H.264 track; dimos-react's `MediaFrame` plays it and
+`captureFrame` grabs the frame showing.
 
 ```js
-const key = `dimos/${$("cameraTopic").value}/sensor_msgs.Image`
-const options = { delivery: "latest", maxHz: 30, encoding: "dimos_lcm_image" }
-unsubscribeCamera = app.zenoh.subscribe(key, options, ({ mediaStream }) => {
-    if (mediaStream && $("camera").srcObject !== mediaStream) {
-        $("camera").srcObject = mediaStream
-    }
-})
+useEffect(() => {
+    const options = { delivery: "latest", maxHz: 30, encoding: "dimos_lcm_image" }
+    return app.zenoh.subscribe(`dimos/${topic}/sensor_msgs.Image`, options, ({ mediaStream }) => {
+        if (mediaStream) {
+            setStream(mediaStream)
+        }
+    })
+}, [topic])
+
+h(MediaFrame, { stream, ref: video, placeholder: `waiting for /${topic}` })
+h(Button, { icon: "camera", onClick: () => setStill(captureFrame(video.current)) }, "Snapshot")
+still && h(MediaFrame, { src: still, alt: "the last snapshot" })
 ```
-
-![a camera topic playing in a video element](docs/images/video-element.png)
-
-## Snapshot the video
-
-Draw the playing frame on a canvas; keep it as a PNG.
-
-```js
-$("snapshot").addEventListener("click", () => {
-    const video = $("camera")
-    const canvas = Object.assign(document.createElement("canvas"), { width: video.videoWidth, height: video.videoHeight })
-    canvas.getContext("2d").drawImage(video, 0, 0)
-    $("still").src = canvas.toDataURL("image/png")
-    $("still").hidden = false
-})
-```
-
-![a snapshot grabbed from the video](docs/images/video-snapshot.png)
 
 ## Drive: publish `cmd_vel` with a deadman
 
@@ -88,22 +98,20 @@ Nothing goes out until a button is pressed. While driving, a zero Twist is armed
 the page dies); the release sends it and disarms.
 
 ```js
-// trimmed: the page wires three buttons this way
 const twist = (forward, turn) => ({ linear: { x: forward }, angular: { z: turn } }) // fields left out are zero
 
-publisher = await app.publisher($("cmdTopic").value, "geometry_msgs.Twist", { delivery: "latest" })
+publisher = await app.publisher(topic, "geometry_msgs.Twist", { delivery: "latest" })
 await publisher.setDeadman(twist(0, 0))
 
-button.addEventListener("pointerdown", () => {
-    driving = setInterval(() => publisher.put(twist(0.3, 0)), 100) // 10 Hz while held
-})
-button.addEventListener("pointerup", () => {
-    clearInterval(driving)
-    publisher.stop() // the zero Twist, then silence
-})
+h(Button, {
+    icon: "arrow-up",
+    onPointerDown: () => (driving = setInterval(() => publisher.put(twist(0.3, 0)), 100)), // 10 Hz while held
+    onPointerUp: () => {
+        clearInterval(driving)
+        publisher.stop() // the zero Twist, then silence
+    },
+}, "forward")
 ```
-
-![hold-to-drive buttons](docs/images/drive-buttons.png)
 
 ## Ask dimos what's running
 
@@ -122,23 +130,17 @@ await json("../../apps/dim-controller/api/status")
 
 ## Call a skill
 
-List the running blueprint's skills into a `<select>`; call one only on a click (a skill can move the robot).
+List the running blueprint's skills into a `Select`; call one only on a click (a skill can move the robot).
 
 ```js
 const { skills } = await json("../../dimos/skills") // [{ name, module, description, params (JSON Schema) }]
-$("skill").replaceChildren(...skills.map(({ name, module }) => new Option(`${module}.${name}`, name)))
 
-$("callSkill").addEventListener("click", () => {
-    const { name, module } = skills[$("skill").selectedIndex]
-    json("../../dimos/skills/call", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ skill: name, module, args: JSON.parse($("skillArgs").value || "{}") }),
-    }) // { ok, text, via, ... }
-})
+h(Select, { value: chosen, onChange: setChosen, options: skills.map(({ name, module }) => [name, `${module}.${name}`]) })
+h(Button, {
+    variant: "primary",
+    onClick: () => postJson("../../dimos/skills/call", { skill: skill.name, module: skill.module, args: JSON.parse(args) }),
+}, "Call") // { ok, text, via, ... }
 ```
-
-![skills listed in a select, one called with its result](docs/images/skills.png)
 
 ## A Desktop notification
 
@@ -164,43 +166,18 @@ openApp("launcher", { stream: "cmd_vel" }) // only blueprints that drive a robot
 
 ## Look like Desktop in every skin
 
-Link Desktop's theme tokens and style only with them:
-
-```html
-<link rel="stylesheet" href="../../theme.css" />
-<style>
-    body { background: var(--bg); color: var(--fg); font: 14px/1.5 var(--sans); }
-    section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); }
-</style>
-```
-
-and follow the skin the person picked:
-
-```js
-function applyTheme() {
-    try {
-        document.documentElement.dataset.skin = localStorage.getItem("portal.theme") || "portal"
-        const corners = localStorage.getItem("portal.corners")
-        if (corners && corners !== "theme") {
-            document.documentElement.dataset.corners = corners
-        }
-    } catch {
-        // storage unavailable (outside Desktop): the theme.css default (Portal) stays
-    }
-}
-applyTheme()
-addEventListener("storage", applyTheme)
-```
-
-![the same page in two Desktop skins](docs/images/themes.png)
+Nothing to write: `AppProvider` (dimos-react's `DimThemeProvider`) links Desktop's `/theme.css`, applies the skin and
+corners the person picked, and follows a change live; every dimos-react component is styled only with Desktop's tokens.
 
 ## Declare what it calls: `dimos.yaml`
 
-Desktop refuses (403 + a notification) any call not listed here.
+Desktop refuses (403 + a notification) any call not listed here. Spec v1.2 adds `zenoh:`: what the page may
+subscribe to and publish through the zenoh-gateway, in the shape of zenoh's ACL rules; without it a v1.2 page gets no
+zenoh at all.
 
 ```yaml
 title: Example (HTML)
-spec-version: v1.0
+spec-version: v1.2
 uses:
     "@dimos-gateway":
         - GET /runs
@@ -212,6 +189,16 @@ uses:
     "@zenoh-gateway": ">=0.5 <0.6"
     dim-controller:
         - GET api/status
+# spec v1.2: what the page may do on zenoh (deny by default; the topic boxes take any topic of these types)
+zenoh:
+    read:
+        - id: odom-and-camera
+          messages: [declare_subscriber]
+          key_exprs: ["dimos/**/geometry_msgs.PoseStamped", "dimos/**/sensor_msgs.Image"]
+    write:
+        - id: drive
+          messages: [put]
+          key_exprs: ["dimos/**/geometry_msgs.Twist"]
 ```
 
 Check it: `dimos-desktop app check .`

@@ -1,6 +1,6 @@
 # the app's contract with Desktop: https://github.com/jeff-hykin/dimos-desktop-mirror/blob/main/docs/create-apps/index.md
 title: Example (HTML)
-spec-version: v1.0
+spec-version: v1.2
 uses:
     "@dimos-gateway":
         - GET /runs
@@ -12,3 +12,13 @@ uses:
     "@zenoh-gateway": ">=0.5 <0.6"
     dim-controller:
         - GET api/status
+# spec v1.2: what the page may do on zenoh (deny by default; the topic boxes take any topic of these types)
+zenoh:
+    read:
+        - id: odom-and-camera
+          messages: [declare_subscriber]
+          key_exprs: ["dimos/**/geometry_msgs.PoseStamped", "dimos/**/sensor_msgs.Image"]
+    write:
+        - id: drive
+          messages: [put]
+          key_exprs: ["dimos/**/geometry_msgs.Twist"]
