@@ -31,7 +31,7 @@ dimos-react.
             "react/": "https://esm.sh/react@19.2.0/",
             "react-dom": "https://esm.sh/react-dom@19.2.0",
             "react-dom/": "https://esm.sh/react-dom@19.2.0/",
-            "dimos-react": "https://esm.sh/gh/jeff-hykin/dimos-react@v0.1.4/mod.js?external=react,react-dom"
+            "dimos-react": "https://esm.sh/gh/jeff-hykin/dimos-react@v0.2.0-beta1/src/index.ts?external=react,react-dom,three"
         }
     }
 </script>
@@ -42,7 +42,8 @@ dimos-react.
 
 ```js
 import { createRoot } from "react-dom/client"
-import { AppProvider, Button, Card, h, Stat } from "dimos-react"
+import { createElement as h } from "react"
+import { AppProvider, Button, Card, Stat } from "dimos-react"
 import { DimApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.20.4/source/dim_app.js"
 
 const app = new DimApp({
