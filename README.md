@@ -189,16 +189,19 @@ uses:
     "@zenoh-gateway": ">=0.5 <0.6"
     dim-controller:
         - GET api/status
-# spec v1.2: what the page may do on zenoh (deny by default; the topic boxes take any topic of these types)
+# spec v1.2: what the page may do on zenoh, as zenoh's ACL config (the topic boxes take any topic of these types)
 zenoh:
+    default_permission: deny
     read:
         - id: odom-and-camera
-          messages: [declare_subscriber]
+          messages: [declare_subscriber, put] # subscribe, and receive its samples
           key_exprs: ["dimos/**/geometry_msgs.PoseStamped", "dimos/**/sensor_msgs.Image"]
+          permission: allow
     write:
         - id: drive
-          messages: [put]
+          messages: [put] # the cmd_vel publisher (and its deadman)
           key_exprs: ["dimos/**/geometry_msgs.Twist"]
+          permission: allow
 ```
 
 Check it: `dimos-desktop app check .`
