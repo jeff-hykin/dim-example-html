@@ -38,16 +38,16 @@ dimos-react.
 ```
 
 `DimApp` holds the page's zenoh-gateway connection (dimos-react's hooks share it) and loads dimos's message codec
-(`/dimos/msgs.js`, generated from the dimos that's running).
+(`/dimos-gateway/msgs.js`, generated from the dimos that's running).
 
 ```js
 import { createRoot } from "react-dom/client"
 import { createElement as h } from "react"
 import { AppProvider, Button, Card, Stat } from "dimos-react"
-import { DimApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.21.1/source/dim_app.js"
+import { DimApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.21.2/source/dim_app.js"
 
 const app = new DimApp({
-    msgDecodeEndpoint: "../../dimos/msgs.js",
+    msgDecodeEndpoint: "../../dimos-gateway/msgs.js",
     // a heartbeat lets the gateway publish our deadman (a zero Twist) if this page dies mid-drive
     connectOptions: { heartbeatHz: 5, heartbeatMisses: 3 },
 })
@@ -117,7 +117,7 @@ h(Button, {
 ## Ask dimos what's running
 
 ```js
-const { launch } = await json("../../dimos/runs")
+const { launch } = await json("../../dimos-gateway/runs")
 // { blueprint: "unitree-go2-basic", phase: "running" }, or null
 ```
 
@@ -134,12 +134,12 @@ await json("../../apps/dim-controller/api/status")
 List the running blueprint's skills into a `Select`; call one only on a click (a skill can move the robot).
 
 ```js
-const { skills } = await json("../../dimos/skills") // [{ name, module, description, params (JSON Schema) }]
+const { skills } = await json("../../dimos-gateway/skills") // [{ name, module, description, params (JSON Schema) }]
 
 h(Select, { value: chosen, onChange: setChosen, options: skills.map(({ name, module }) => [name, `${module}.${name}`]) })
 h(Button, {
     variant: "primary",
-    onClick: () => postJson("../../dimos/skills/call", { skill: skill.name, module: skill.module, args: JSON.parse(args) }),
+    onClick: () => postJson("../../dimos-gateway/skills/call", { skill: skill.name, module: skill.module, args: JSON.parse(args) }),
 }, "Call") // { ok, text, via, ... }
 ```
 
@@ -158,7 +158,7 @@ json("../../api/notifications", {
 ## Open the Launcher, filtered
 
 ```js
-import { openApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.21.1/source/desktop.js"
+import { openApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.21.2/source/desktop.js"
 
 openApp("launcher", { stream: "cmd_vel" }) // only blueprints that drive a robot; also query, robot, selected
 ```
