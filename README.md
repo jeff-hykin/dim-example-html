@@ -134,12 +134,12 @@ await json("../../apps/dim-controller/api/status")
 List the running blueprint's skills into a `Select`; call one only on a click (a skill can move the robot).
 
 ```js
-const { skills } = await json("../../dimos-gateway/skills") // [{ name, module, description, params (JSON Schema) }]
+const { skills } = await json("../../dimos-gateway/runs/skills") // [{ name, module, description, params (JSON Schema) }]
 
 h(Select, { value: chosen, onChange: setChosen, options: skills.map(({ name, module }) => [name, `${module}.${name}`]) })
 h(Button, {
     variant: "primary",
-    onClick: () => postJson("../../dimos-gateway/skills/call", { skill: skill.name, module: skill.module, args: JSON.parse(args) }),
+    onClick: () => postJson("../../dimos-gateway/runs", { skill: { module: skill.module, name: skill.name, args: JSON.parse(args) } }),
 }, "Call") // { ok, text, via, ... }
 ```
 
@@ -183,8 +183,8 @@ uses:
     "@dimos-gateway":
         - GET /runs
         - GET /msgs.js
-        - GET /skills
-        - POST /skills/call
+        - GET /runs/skills
+        - POST /runs
     "@desktop-gateway":
         - POST /api/notifications
     "@zenoh-gateway": ">=0.5 <0.6"
