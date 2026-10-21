@@ -129,18 +129,19 @@ Another app's public endpoint (its `provides:`), at `../../apps/<name>/`.
 await json("../../apps/dim-controller/api/status")
 ```
 
-## Call a skill
+## Call an RPC (or a skill)
 
-List the running blueprint's skills into a `Select`; call one only on a click (a skill can move the robot).
+List the running blueprint's RPCs into a `Select`; call one only on a click (an RPC can move the robot). Skills are
+RPCs with `skill: true`.
 
 ```js
-const { skills } = await json("../../dimos-gateway/runs/skills") // [{ name, module, description, params (JSON Schema) }]
+const { rpcs } = await json("../../dimos-gateway/runs/rpcs") // [{ name, module, rpc, doc, params, skill }]
 
-h(Select, { value: chosen, onChange: setChosen, options: skills.map(({ name, module }) => [name, `${module}.${name}`]) })
+h(Select, { value: chosen, onChange: setChosen, options: rpcs.map(({ rpc, skill }) => [rpc, skill ? `${rpc} (skill)` : rpc]) })
 h(Button, {
     variant: "primary",
-    onClick: () => postJson("../../dimos-gateway/runs", { skill: { module: skill.module, name: skill.name, args: JSON.parse(args) } }),
-}, "Call") // { ok, text, via, ... }
+    onClick: () => postJson("../../dimos-gateway/runs", { rpc: { module: picked.module, name: picked.name, args: JSON.parse(args) } }),
+}, "Call") // { ok, result, error, ... }
 ```
 
 ## A Desktop notification
@@ -183,7 +184,7 @@ uses:
     "@dimos-gateway":
         - GET /runs
         - GET /msgs.js
-        - GET /runs/skills
+        - GET /runs/rpcs
         - POST /runs
     "@desktop-gateway":
         - POST /api/notifications
