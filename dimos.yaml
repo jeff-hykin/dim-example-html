@@ -1,6 +1,6 @@
 # the app's contract with Desktop: https://github.com/jeff-hykin/dimos-desktop-mirror/blob/main/docs/create-apps/index.md
 title: Example (HTML)
-version: "0.1.21"
+version: "0.1.22"
 spec-version: v1.3
 uses:
     "@dimos-gateway":
