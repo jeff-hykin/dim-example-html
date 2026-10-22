@@ -117,8 +117,8 @@ h(Button, {
 ## Ask dimos what's running
 
 ```js
-const { launch } = await json("../../dimos-gateway/runs")
-// { blueprint: "unitree-go2-basic", phase: "running" }, or null
+const { running, blueprint, launch } = await json("../../dimos-gateway/active")
+// running: true, blueprint: "unitree-go2-basic", launch: { phase: "running", ... } (the gateway's last launch, or null)
 ```
 
 ## Call another app
@@ -135,12 +135,13 @@ List the running blueprint's RPCs into a `Select`; call one only on a click (an 
 RPCs with `skill: true`.
 
 ```js
-const { rpcs } = await json("../../dimos-gateway/runs/rpcs") // [{ name, module, rpc, doc, params, skill }]
+const { modules } = await json("../../dimos-gateway/active/modules") // [{ id, rpcs: [{ name, module, doc, params, skill }] }]
+const rpcs = modules.flatMap((m) => m.rpcs).map((r) => ({ ...r, rpc: `${r.module}.${r.name}` }))
 
 h(Select, { value: chosen, onChange: setChosen, options: rpcs.map(({ rpc, skill }) => [rpc, skill ? `${rpc} (skill)` : rpc]) })
 h(Button, {
     variant: "primary",
-    onClick: () => postJson("../../dimos-gateway/runs", { rpc: { module: picked.module, name: picked.name, args: JSON.parse(args) } }),
+    onClick: () => postJson(`../../dimos-gateway/active/modules/${picked.module}/rpcs/${picked.name}`, { kwargs: JSON.parse(args) }),
 }, "Call") // { ok, result, error, ... }
 ```
 
@@ -179,13 +180,14 @@ zenoh at all.
 
 ```yaml
 title: Example (HTML)
-spec-version: v1.2
+version: "0.1.21"
+spec-version: v1.3
 uses:
     "@dimos-gateway":
-        - GET /runs
+        - GET /active
         - GET /msgs.js
-        - GET /runs/rpcs
-        - POST /runs
+        - GET /active/modules
+        - POST /active/modules/{id}/rpcs/{name}
     "@desktop-gateway":
         - POST /api/notifications
     "@zenoh-gateway": ">=0.5 <0.6"
