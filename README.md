@@ -31,23 +31,23 @@ dimos-react.
             "react/": "https://esm.sh/react@19.2.0/",
             "react-dom": "https://esm.sh/react-dom@19.2.0",
             "react-dom/": "https://esm.sh/react-dom@19.2.0/",
-            "dimos-react": "https://esm.sh/gh/jeff-hykin/dimos-react@v0.2.0-beta16/src/index.ts?external=react,react-dom,three"
+            "dimos-react": "https://esm.sh/gh/jeff-hykin/dimos-react@v0.3.1/src/index.ts?external=react,react-dom,three"
         }
     }
 </script>
 ```
 
 `DimApp` holds the page's zenoh-gateway connection (dimos-react's hooks share it) and loads dimos's message codec
-(`/dimos-gateway/msgs.js`, generated from the dimos that's running).
+(`/gateways/dimos/msgs.js`, generated from the dimos that's running).
 
 ```js
 import { createRoot } from "react-dom/client"
 import { createElement as h } from "react"
 import { AppProvider, Button, Card, Stat } from "dimos-react"
-import { DimApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.22.3/source/dim_app.js"
+import { DimApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.23.1/source/dim_app.js"
 
 const app = new DimApp({
-    msgDecodeEndpoint: "../../dimos-gateway/msgs.js",
+    msgDecodeEndpoint: "../../gateways/dimos/msgs.js",
     // a heartbeat lets the gateway publish our deadman (a zero Twist) if this page dies mid-drive
     connectOptions: { heartbeatHz: 5, heartbeatMisses: 3 },
 })
@@ -117,7 +117,7 @@ h(Button, {
 ## Ask dimos what's running
 
 ```js
-const { running, blueprint, launch } = await json("../../dimos-gateway/active")
+const { running, blueprint, launch } = await json("../../gateways/dimos/active")
 // running: true, blueprint: "unitree-go2-basic", launch: { phase: "running", ... } (the gateway's last launch, or null)
 ```
 
@@ -135,23 +135,23 @@ List the running blueprint's RPCs into a `Select`; call one only on a click (an 
 RPCs with `skill: true`.
 
 ```js
-const { modules } = await json("../../dimos-gateway/active/modules") // [{ id, rpcs: [{ name, module, doc, params, skill }] }]
+const { modules } = await json("../../gateways/dimos/active/modules") // [{ id, rpcs: [{ name, module, doc, params, skill }] }]
 const rpcs = modules.flatMap((m) => m.rpcs).map((r) => ({ ...r, rpc: `${r.module}.${r.name}` }))
 
 h(Select, { value: chosen, onChange: setChosen, options: rpcs.map(({ rpc, skill }) => [rpc, skill ? `${rpc} (skill)` : rpc]) })
 h(Button, {
     variant: "primary",
-    onClick: () => postJson(`../../dimos-gateway/active/modules/${picked.module}/rpcs/${picked.name}`, { kwargs: JSON.parse(args) }),
+    onClick: () => postJson(`../../gateways/dimos/active/modules/${picked.module}/rpcs/${picked.name}`, { kwargs: JSON.parse(args) }),
 }, "Call") // { ok, result, error, ... }
 ```
 
 ## A Desktop notification
 
 ```js
-json("../../api/notifications", {
+json("../../gateways/desktop/ui/notifications", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ title: "Hello from the example app", body: "POST /api/notifications", kind: "ok" }),
+    body: JSON.stringify({ title: "Hello from the example app", body: "POST /gateways/desktop/ui/notifications", kind: "ok" }),
 })
 ```
 
@@ -160,7 +160,7 @@ json("../../api/notifications", {
 ## Open the Launcher, filtered
 
 ```js
-import { openApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.22.3/source/desktop.js"
+import { openApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.23.1/source/desktop.js"
 
 openApp("launcher", { stream: "cmd_vel" }) // only blueprints that drive a robot; also query, robot, selected
 ```
@@ -181,7 +181,7 @@ zenoh at all.
 ```yaml
 title: Example (HTML)
 version: "0.1.21"
-spec-version: v1.3
+spec-version: v1.4
 uses:
     "@dimos-gateway":
         - GET /active
@@ -189,7 +189,7 @@ uses:
         - GET /active/modules
         - POST /active/modules/{id}/rpcs/{name}
     "@desktop-gateway":
-        - POST /api/notifications
+        - POST /ui/notifications
     "@zenoh-gateway": ">=0.5 <0.6"
     dim-controller:
         - GET api/status

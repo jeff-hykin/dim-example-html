@@ -1,10 +1,10 @@
 <!doctype html>
 <!--
   A dimOS Desktop app page. Desktop serves it at /apps/<name>/, so every URL below is RELATIVE:
-    ../../dimos-gateway/...  the dimos gateway's API                       -> /dimos-gateway/...
-    ../../api/...            Desktop's own API                             -> /api/...
-    ../../apps/<other>/      another app's public (provides:) endpoints    -> /apps/<other>/...
-    api/...                  this app's own server (the Deno/Rust examples) -> /apps/<name>/api/...
+    ../../gateways/dimos/...    the dimos gateway's API                        -> /gateways/dimos/...
+    ../../gateways/desktop/...  Desktop's own API                              -> /gateways/desktop/...
+    ../../apps/<other>/         another app's public (provides:) endpoints     -> /apps/<other>/...
+    api/...                     this app's own server (the Deno/Rust examples) -> /apps/<name>/api/...
   Every one of them is declared in dimos.yaml; Desktop refuses an undeclared call from this page (a 403 + a notification).
   So is everything it does on zenoh (dimos.yaml `zenoh:`, spec v1.2): the subscriptions and the cmd_vel publisher below.
 -->
@@ -21,7 +21,7 @@
                     "react/": "https://esm.sh/react@19.2.0/",
                     "react-dom": "https://esm.sh/react-dom@19.2.0",
                     "react-dom/": "https://esm.sh/react-dom@19.2.0/",
-                    "dimos-react": "https://esm.sh/gh/jeff-hykin/dimos-react@v0.2.0-beta16/src/index.ts?external=react,react-dom,three"
+                    "dimos-react": "https://esm.sh/gh/jeff-hykin/dimos-react@v0.3.1/src/index.ts?external=react,react-dom,three"
                 }
             }
         </script>
@@ -32,7 +32,7 @@
             // The example page: the same page in the html and Rust examples (the Deno one is its TSX twin). Plain ES
             // modules, no build step. Two libraries, by URL:
             //   dimos-react: the whole UI (Desktop's theme followed live, cards, buttons, inputs, video, toasts)
-            //   dim-app's DimApp: the page's connection to Desktop's zenoh-gateway, plus the codec ../../dimos-gateway/msgs.js
+            //   dim-app's DimApp: the page's connection to Desktop's zenoh-gateway, plus the codec ../../gateways/dimos/msgs.js
             //     from the dimos gateway (dimos.yaml `@dimos-gateway: GET /msgs.js`), generated from the dimos that's
             //     running, so it always matches it. dimos-react's hooks share that one connection.
             import { createRoot } from "react-dom/client"
@@ -55,12 +55,12 @@
                 TextInput,
                 useToast,
             } from "dimos-react"
-            import { DimApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.22.3/source/dim_app.js"
-            import { openApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.22.3/source/desktop.js"
+            import { DimApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.23.1/source/dim_app.js"
+            import { openApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.23.1/source/desktop.js"
 
             // dimos's zenoh keys are `dimos/<topic>/<message type>`; DimApp decodes and encodes them with msgs.js.
             const app = new DimApp({
-                msgDecodeEndpoint: "../../dimos-gateway/msgs.js",
+                msgDecodeEndpoint: "../../gateways/dimos/msgs.js",
                 // a heartbeat lets the gateway publish our deadman (a zero Twist) if this page dies mid-drive
                 connectOptions: { heartbeatHz: 5, heartbeatMisses: 3 },
             })
@@ -127,7 +127,7 @@
                 }, [topic])
                 return h(
                     Section,
-                    { title: "1 · Subscribe to a topic and decode it", note: `zenoh-gateway → \`dimos/${topic}/geometry_msgs.PoseStamped\` → /dimos-gateway/msgs.js` },
+                    { title: "1 · Subscribe to a topic and decode it", note: `zenoh-gateway → \`dimos/${topic}/geometry_msgs.PoseStamped\` → /gateways/dimos/msgs.js` },
                     h(
                         Row,
                         { gap: 28, wrap: true },
@@ -238,11 +238,11 @@
             // ── 4: the dimos gateway (dimos.yaml @dimos-gateway: GET /active) ──
             function Gateway() {
                 const runs = useLoad(() =>
-                    json("../../dimos-gateway/active").then(({ running, blueprint, launch }) =>
+                    json("../../gateways/dimos/active").then(({ running, blueprint, launch }) =>
                         running ? { blueprint, phase: launch?.phase ?? "running" } : launch ? { blueprint: launch.blueprint, phase: launch.phase } : "nothing launched yet"
                     )
                 )
-                return h(Section, { title: "4 · Call the dimos gateway", note: "`GET /dimos-gateway/active`: what's running" }, h(Output, { value: runs }))
+                return h(Section, { title: "4 · Call the dimos gateway", note: "`GET /gateways/dimos/active`: what's running" }, h(Output, { value: runs }))
             }
 
             // ── 5: another app's public endpoint (dimos.yaml dim-controller: GET api/status) ──
@@ -255,7 +255,7 @@
             function TalkToDesktop() {
                 const toast = useToast()
                 const notify = () =>
-                    postJson("../../api/notifications", { title: "Hello from the example app", body: "POST /api/notifications", kind: "ok" })
+                    postJson("../../gateways/desktop/ui/notifications", { title: "Hello from the example app", body: "POST /gateways/desktop/ui/notifications", kind: "ok" })
                         .catch((error) => toast.error(error.message))
                 return h(
                     Section,
@@ -278,7 +278,7 @@
                 const [args, setArgs] = useState("{}")
                 const [result, setResult] = useState(undefined)
                 useEffect(() => {
-                    json("../../dimos-gateway/active/modules").then(
+                    json("../../gateways/dimos/active/modules").then(
                         ({ modules }) => {
                             // each running module instance's RPCs; `rpc` (module.name) names one in the picker
                             const all = modules.flatMap(({ rpcs }) => rpcs).map((rpc) => ({ ...rpc, rpc: `${rpc.module}.${rpc.name}` }))
@@ -292,12 +292,12 @@
                 const call = () => {
                     // inside then(): bad JSON in the args box shows as the result's error
                     Promise.resolve()
-                        .then(() => postJson(`../../dimos-gateway/active/modules/${encodeURIComponent(picked.module)}/rpcs/${encodeURIComponent(picked.name)}`, { kwargs: JSON.parse(args || "{}") }))
+                        .then(() => postJson(`../../gateways/dimos/active/modules/${encodeURIComponent(picked.module)}/rpcs/${encodeURIComponent(picked.name)}`, { kwargs: JSON.parse(args || "{}") }))
                         .then(setResult, setResult)
                 }
                 return h(
                     Section,
-                    { title: "7 · Call an RPC", note: "`GET /dimos-gateway/active/modules` lists the running blueprint's modules and their RPCs (skills have skill: true); `POST /dimos-gateway/active/modules/{id}/rpcs/{name}` calls one (only when you click: an RPC can move the robot)" },
+                    { title: "7 · Call an RPC", note: "`GET /gateways/dimos/active/modules` lists the running blueprint's modules and their RPCs (skills have skill: true); `POST /gateways/dimos/active/modules/{id}/rpcs/{name}` calls one (only when you click: an RPC can move the robot)" },
                     h(
                         Row,
                         { wrap: true },
