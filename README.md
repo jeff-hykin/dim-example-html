@@ -31,7 +31,7 @@ dimos-react.
             "react/": "https://esm.sh/react@19.2.0/",
             "react-dom": "https://esm.sh/react-dom@19.2.0",
             "react-dom/": "https://esm.sh/react-dom@19.2.0/",
-            "dimos-react": "https://esm.sh/gh/jeff-hykin/dimos-react@v0.3.1/src/index.ts?external=react,react-dom,three"
+            "dimos-react": "https://esm.sh/gh/jeff-hykin/dimos-react@v0.3.2/src/index.ts?external=react,react-dom,three"
         }
     }
 </script>
@@ -44,7 +44,7 @@ dimos-react.
 import { createRoot } from "react-dom/client"
 import { createElement as h } from "react"
 import { AppProvider, Button, Card, Stat } from "dimos-react"
-import { DimApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.23.1/source/dim_app.js"
+import { DimApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.23.2/source/dim_app.js"
 
 const app = new DimApp({
     msgDecodeEndpoint: "../../gateways/dimos/msgs.js",
@@ -160,7 +160,7 @@ json("../../gateways/desktop/ui/notifications", {
 ## Open the Launcher, filtered
 
 ```js
-import { openApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.23.1/source/desktop.js"
+import { openApp } from "https://esm.sh/gh/jeff-hykin/dim-app@v0.23.2/source/desktop.js"
 
 openApp("launcher", { stream: "cmd_vel" }) // only blueprints that drive a robot; also query, robot, selected
 ```
