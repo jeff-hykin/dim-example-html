@@ -1,7 +1,7 @@
 # the app's contract with Desktop: https://github.com/jeff-hykin/dimos-desktop-mirror/blob/main/docs/create-apps/index.md
 title: Example (HTML)
-version: "0.2.2"
-spec-version: v1.4
+version: "0.3.0"
+spec-version: v1.5
 uses:
     "@dimos-gateway":
         - GET /active
@@ -9,6 +9,9 @@ uses:
         - GET /active/modules
         - POST /active/modules/{id}/rpcs/{name}
     "@desktop-gateway":
+        # spec v1.5 adds `env:` here, the values an app needs of a provider's environment, keyed per value of
+        # DIMOS_APP (every app gets DIMOS_APP, so naming the variable says nothing). A static app has no server and
+        # so needs none of it: see the deno, rust and bun examples for a file that lists what it reads.
         - POST /ui/notifications
     "@zenoh-gateway": ">=0.5 <0.6"
     dim-controller:
